@@ -1,12 +1,13 @@
 import { Button } from "@mui/material"
+import UserLayout from "./layouts/UserLayout"
 
 
 function App() {
 
   return (
-    <>
- <Button variant="contained">Hello world</Button>
-    </>
+    <UserLayout>
+      <div></div>
+    </UserLayout>
   )
 }
 
