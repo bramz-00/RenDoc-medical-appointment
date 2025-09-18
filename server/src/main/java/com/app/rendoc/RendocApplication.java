@@ -1,4 +1,4 @@
-package com.app.Rendoc;
+package com.app.rendoc;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
