@@ -5,9 +5,12 @@ import com.app.rendoc.model.Speciality;
 import com.app.rendoc.repository.speciality.SpecialityRepository;
 import com.app.rendoc.request.speciality.AddSpecialityRequest;
 import com.app.rendoc.request.speciality.UpdateSpecialityRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
-
+@Service
+@RequiredArgsConstructor
 public class SpecialityService implements  ISpecialityService{
 
     private SpecialityRepository specialityRepository;
