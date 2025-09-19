@@ -21,6 +21,8 @@ spring:
 # Optional: configure server port
 server:
   port: 8081
+api:
+  prefix: /api
 
 # Optional: logging
 logging:

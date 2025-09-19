@@ -26,4 +26,8 @@ public class Speciality {
 
     @OneToMany(mappedBy = "speciality")
     private List<Doctor> doctors;
+
+    public Speciality(String name) {
+        this.name = name;
+    }
 }

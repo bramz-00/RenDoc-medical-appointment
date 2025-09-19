@@ -12,10 +12,15 @@ public class SpecialityService implements  ISpecialityService{
 
     private SpecialityRepository specialityRepository;
     @Override
-    public Speciality addSpeciality(AddSpecialityRequest speciality) {
-        return null;
-    }
+    public Speciality addSpeciality(AddSpecialityRequest request) {
 
+        return specialityRepository.save(createSpeciality(request));
+    }
+    private Speciality createSpeciality(AddSpecialityRequest request) {
+        return new Speciality(
+                request.getName()
+        );
+    }
     @Override
     public Speciality getSpecialityById(Long id) {
         return specialityRepository.findById(id)
@@ -31,8 +36,18 @@ public class SpecialityService implements  ISpecialityService{
     }
 
     @Override
-    public Speciality updateSpeciality(UpdateSpecialityRequest speciality, Long specialityId) {
-        return null;
+    public Speciality updateSpeciality(UpdateSpecialityRequest request, Long specialityId) {
+        return specialityRepository.findById(specialityId)
+                .map(existingSpeciality -> updateExistingSpeciality(existingSpeciality,request))
+                .map(specialityRepository :: save)
+                .orElseThrow(()-> new ResourceNotFoundException("Product not found!"));
+    }
+
+
+    private Speciality updateExistingSpeciality(Speciality existingSpeciality, UpdateSpecialityRequest request) {
+        existingSpeciality.setName(request.getName());
+        return  existingSpeciality;
+
     }
 
     @Override
