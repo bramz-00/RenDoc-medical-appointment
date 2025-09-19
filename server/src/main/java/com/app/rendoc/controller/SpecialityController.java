@@ -24,14 +24,17 @@ public class SpecialityController {
     @GetMapping("/all")
     public ResponseEntity<ApiResponse> getAllSpecialities() {
         try {
-            List<Speciality> categories = specialityService.getAllSpecialities();
-            return  ResponseEntity.ok(new ApiResponse("Found!", categories));
+            List<Speciality> specialities = specialityService.getAllSpecialities();
+            return  ResponseEntity.ok(new ApiResponse("Found!", specialities));
         } catch (Exception e) {
-            return ResponseEntity.status(INTERNAL_SERVER_ERROR).body(new ApiResponse("Error:", INTERNAL_SERVER_ERROR));
+            e.printStackTrace(); // log to console
+            return ResponseEntity.status(INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse("Error: " + e.getMessage(), null));
         }
+
     }
 
-    @PostMapping("/add")
+    @PostMapping("/store")
     public ResponseEntity<ApiResponse> addSpeciality(@RequestBody AddSpecialityRequest request) {
         try {
             Speciality theSpeciality = specialityService.addSpeciality(request);
@@ -41,7 +44,7 @@ public class SpecialityController {
         }
     }
 
-    @GetMapping("/speciality/{id}/speciality")
+    @GetMapping("/{id}/show")
     public ResponseEntity<ApiResponse> getSpecialityById(@PathVariable Long id){
         try {
             Speciality theSpeciality = specialityService.getSpecialityById(id);
@@ -52,21 +55,23 @@ public class SpecialityController {
     }
 
 
-    @DeleteMapping("/speciality/{id}/delete")
-    public ResponseEntity<ApiResponse> deleteSpeciality(@PathVariable Long id){
+
+
+    @PutMapping("/update/{specialityId}")
+    public  ResponseEntity<ApiResponse> updateSpeciality(@RequestBody UpdateSpecialityRequest request, @PathVariable Long specialityId) {
         try {
-            specialityService.deleteSpecialityById(id);
-            return  ResponseEntity.ok(new ApiResponse("Found", null));
+            Speciality theSpeciality = specialityService.updateSpeciality(request, specialityId);
+            return ResponseEntity.ok(new ApiResponse("Update speciality success!", theSpeciality));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
         }
     }
 
-    @PutMapping("/speciality/{specialityId}/update")
-    public  ResponseEntity<ApiResponse> updateSpeciality(@RequestBody UpdateSpecialityRequest request, @PathVariable Long specialityId) {
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<ApiResponse> deleteSpeciality(@PathVariable Long id){
         try {
-            Speciality theSpeciality = specialityService.updateSpeciality(request, specialityId);
-            return ResponseEntity.ok(new ApiResponse("Update speciality success!", theSpeciality));
+            specialityService.deleteSpecialityById(id);
+            return  ResponseEntity.ok(new ApiResponse(" Speciality deleted with success!", null));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(NOT_FOUND).body(new ApiResponse(e.getMessage(), null));
         }
