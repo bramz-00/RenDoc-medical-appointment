@@ -8,5 +8,5 @@ import com.app.rendoc.response.auth.MessageResponse;
 public interface IAuthService {
     AuthResponse register(RegisterRequest request);
     AuthResponse login(LoginRequest request);
-    MessageResponse logout();
+    MessageResponse logout(String token);
 }

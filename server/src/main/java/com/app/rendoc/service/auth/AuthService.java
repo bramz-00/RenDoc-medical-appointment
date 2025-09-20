@@ -7,9 +7,12 @@ import com.app.rendoc.model.User;
 import com.app.rendoc.repository.user.UserRepository;
 import com.app.rendoc.request.auth.LoginRequest;
 import com.app.rendoc.request.auth.RegisterRequest;
+import com.app.rendoc.response.ApiResponse;
 import com.app.rendoc.response.auth.AuthResponse;
 import com.app.rendoc.response.auth.MessageResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -24,6 +27,8 @@ public class AuthService   implements IAuthService{
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
+    private final TokenBlacklistService tokenBlacklistService;
+
     @Override
     public AuthResponse register(RegisterRequest request) {
         // Check if user already exists
@@ -35,8 +40,8 @@ public class AuthService   implements IAuthService{
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setFirstname(request.getFirstName());
-        user.setLastname(request.getLastName());
+        user.setFirstname(request.getFirstname());
+        user.setLastname(request.getLastname());
 
         User savedUser = userRepository.save(user);
 
@@ -67,10 +72,15 @@ public class AuthService   implements IAuthService{
                 user.getFirstname(), user.getLastname(), user.getRole());
     }
 
-    @Override
-    public MessageResponse logout() {
-        // In a stateless JWT setup, logout is handled client-side
-        // The client should remove the token from storage
+
+    public MessageResponse logout(String token) {
+        if (token != null) {
+            tokenBlacklistService.blacklistToken(token);
+        }
+
+        if (token != null && !tokenBlacklistService.isTokenBlacklisted(token)) {
+            return new MessageResponse("Token is not blacklisted!");
+        }
         return new MessageResponse("Logout successful!");
     }
 }

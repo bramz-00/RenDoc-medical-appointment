@@ -1,24 +1,29 @@
 package com.app.rendoc.controller;
 
 
+import com.app.rendoc.config.JwtUtils;
 import com.app.rendoc.request.auth.LoginRequest;
 import com.app.rendoc.request.auth.RegisterRequest;
 import com.app.rendoc.response.ApiResponse;
 import com.app.rendoc.response.auth.AuthResponse;
 import com.app.rendoc.response.auth.MessageResponse;
 import com.app.rendoc.service.auth.IAuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("${api.prefix}/auth")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class AuthController {
     private final IAuthService authService;
+
+    private final JwtUtils jwtUtils;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -46,13 +51,17 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse> logout() {
+    public ResponseEntity<ApiResponse> logout(HttpServletRequest request) {
         try {
-            MessageResponse response = authService.logout();
+            String token = jwtUtils.parseJwtFromRequest(request);
+            MessageResponse response = authService.logout(token);
+
             return ResponseEntity.ok(new ApiResponse(response.getMessage(), null));
         } catch (Exception e) {
             return ResponseEntity.status(INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse("Error: " + e.getMessage(), null));
         }
     }
+
+
 }
