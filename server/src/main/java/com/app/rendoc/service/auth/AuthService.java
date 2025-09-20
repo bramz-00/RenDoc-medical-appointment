@@ -10,6 +10,7 @@ import com.app.rendoc.request.auth.RegisterRequest;
 import com.app.rendoc.response.ApiResponse;
 import com.app.rendoc.response.auth.AuthResponse;
 import com.app.rendoc.response.auth.MessageResponse;
+import com.app.rendoc.response.auth.UserInfoResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -82,5 +83,29 @@ public class AuthService   implements IAuthService{
             return new MessageResponse("Token is not blacklisted!");
         }
         return new MessageResponse("Logout successful!");
+    }
+
+    @Override
+    public UserInfoResponse getCurrentUserInfo(Authentication authentication) {
+        try {
+            // Get the username/email from the authentication object
+            String email = authentication.getName();
+
+            // Find the user in the database
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+
+            // Return user information
+            return new UserInfoResponse(
+                    user.getId(),
+                    user.getEmail(),
+                    user.getFirstname(),
+                    user.getLastname(),
+                    user.getRole().name(),
+                    true
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Error retrieving user information: " + e.getMessage());
+        }
     }
 }

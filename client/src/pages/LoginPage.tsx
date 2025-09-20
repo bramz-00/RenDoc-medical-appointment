@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Container,
   Box,
@@ -12,26 +12,30 @@ import {
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import UserLayout from "@/layouts/UserLayout"
-import api from "@/api/client";
+import { useForm } from "react-hook-form";
+import { useAuthStore } from "@/stores/authStore";
+import { useNavigate } from "react-router-dom";
+
+interface LoginFormInputs {
+  email: string;
+  password: string;
+}
 export default function LoginPage() {
+  const { register, handleSubmit } = useForm<LoginFormInputs>();
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "" });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const { login, loading } = useAuthStore();
+  const navigate = useNavigate();
+  const onSubmit = async (data: LoginFormInputs) => {
+    try {
+      await login(data);
+      navigate('/')
+      console.log("Login successful!");
+    } catch (err) {
+      console.error("Login failed:", err);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    api.post('/auth/login',form).then(res=>{
-      console.log(res.data)
-      localStorage.setItem("token", res.data.data.token);
-    }).catch(err=>{
-      console.error("Login error:", err);
-    })
-    
-    console.log("Login submitted:", form);
-  };
+
 
   return (
     <UserLayout>
@@ -57,7 +61,7 @@ export default function LoginPage() {
               gutterBottom
               fontWeight="bold"
             >
-              Welcome Back 
+              Welcome Back
             </Typography>
             <Typography
               variant="body2"
@@ -68,27 +72,23 @@ export default function LoginPage() {
               Please sign in to continue
             </Typography>
 
-            <Box component="form" onSubmit={handleSubmit} noValidate>
+            <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
               <TextField
                 label="Email Address"
-                name="email"
                 fullWidth
+                {...register("email", { required: true })}
                 margin="normal"
                 variant="outlined"
-                value={form.email}
-                onChange={handleChange}
                 required
               />
 
               <TextField
                 label="Password"
-                name="password"
+                {...register("password", { required: true })}
                 type={showPassword ? "text" : "password"}
                 fullWidth
                 margin="normal"
                 variant="outlined"
-                value={form.password}
-                onChange={handleChange}
                 required
                 InputProps={{
                   endAdornment: (
@@ -110,9 +110,10 @@ export default function LoginPage() {
                 fullWidth
                 sx={{ mt: 3, py: 1.3, borderRadius: 2, fontWeight: "bold" }}
               >
-                Login
+                {loading ? "Logging in..." : "Login"}
               </Button>
             </Box>
+
           </CardContent>
         </Card>
       </Container>

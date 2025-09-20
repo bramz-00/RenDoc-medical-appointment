@@ -7,14 +7,18 @@ import com.app.rendoc.request.auth.RegisterRequest;
 import com.app.rendoc.response.ApiResponse;
 import com.app.rendoc.response.auth.AuthResponse;
 import com.app.rendoc.response.auth.MessageResponse;
+import com.app.rendoc.response.auth.UserInfoResponse;
 import com.app.rendoc.service.auth.IAuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @RestController
 @RequestMapping("${api.prefix}/auth")
@@ -63,5 +67,25 @@ public class AuthController {
         }
     }
 
+
+    @GetMapping("/whoami")
+    public ResponseEntity<ApiResponse> whoAmI() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication == null || !authentication.isAuthenticated() ||
+                    "anonymousUser".equals(authentication.getPrincipal())) {
+                return ResponseEntity.status(UNAUTHORIZED)
+                        .body(new ApiResponse("User not authenticated", null));
+            }
+
+            UserInfoResponse userInfo = authService.getCurrentUserInfo(authentication);
+            return ResponseEntity.ok(new ApiResponse("User information retrieved successfully!", userInfo));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse("Error retrieving user information: " + e.getMessage(), null));
+        }
+    }
 
 }
