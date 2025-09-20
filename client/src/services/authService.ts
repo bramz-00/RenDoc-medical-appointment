@@ -1,6 +1,7 @@
 // services/authService.ts
 
 import api from "@/api/client";
+import { useAuthStore } from "@/stores/authStore";
 
 
 export interface LoginForm {
@@ -21,7 +22,7 @@ export const authService = {
         const res = await api.post("/auth/login", form);
         return res.data.data;
     },
-      logout: async () => {
+    logout: async () => {
         const res = await api.post("/auth/logout");
         return res.data;
     },
