@@ -9,6 +9,16 @@
             "projectName": "Rendoc-server",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-RendocApplication<Rendoc-server>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.app.rendoc.RendocApplication",
+            "projectName": "Rendoc-server",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }

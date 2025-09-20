@@ -1,13 +1,18 @@
 import { Button } from "@mui/material"
-import UserLayout from "./layouts/UserLayout"
+import LoginPage from "./pages/LoginPage"
+import { Route, Routes } from "react-router-dom"
 
 
 function App() {
 
   return (
-    <UserLayout>
-      <div></div>
-    </UserLayout>
+
+    <Routes>
+      <Route path="/" element={<LoginPage />} />
+      {/* <Route path="/about" element={<AboutPage />} /> */}
+      {/* <Route path="/contact" element={<ContactPage />} /> */}
+      {/* Add more routes as needed */}
+    </Routes>
   )
 }
 
