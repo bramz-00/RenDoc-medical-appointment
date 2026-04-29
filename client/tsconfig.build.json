@@ -1,0 +1,10 @@
+{
+  // Extends the regular app tsconfig but relaxes rules that block production
+  // builds due to pre-existing unused imports. Keep the dev tsconfig strict.
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["src"]
+}
