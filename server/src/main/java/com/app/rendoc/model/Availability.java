@@ -6,6 +6,7 @@ import lombok.*;
 import javax.print.Doc;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "availabilities")
@@ -28,6 +29,7 @@ public class Availability {
 
     private boolean isBooked = false;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "availability")
     private List<Appointment> appointments;
 }

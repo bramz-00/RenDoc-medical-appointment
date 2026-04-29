@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "doctors")
@@ -31,9 +33,11 @@ public class Doctor {
     private String status;
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "doctor")
     private List<Appointment> appointments;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "doctor")
     private List<Availability> availabilities;
 

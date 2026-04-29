@@ -21,6 +21,7 @@ public class Cabinet {
     private String location;
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "cabinet")
     private List<Doctor> doctors;
 }

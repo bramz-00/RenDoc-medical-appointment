@@ -1,4 +1,5 @@
 import axios from "axios";
+import Cookies from "js-cookie";
 
 // Use Vite environment variable
 const baseURL =
@@ -6,17 +7,27 @@ const baseURL =
 
 const api = axios.create({
   baseURL: baseURL,
-  withCredentials: true, // Keep this
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
-
   },
 });
 
 // Add an interceptor to attach the token before each request
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token"); // or sessionStorage, or Zustand/Redux state
+    const authStorage = Cookies.get("auth-storage");
+    let token = null;
+    
+    if (authStorage) {
+      try {
+        const parsed = JSON.parse(authStorage);
+        token = parsed.state?.token;
+      } catch (e) {
+        console.error("Error parsing auth-storage from cookie", e);
+      }
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

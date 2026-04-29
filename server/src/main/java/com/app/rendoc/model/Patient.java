@@ -24,6 +24,7 @@ public class Patient {
     private String status;
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "patient")
     private List<Appointment> appointments;
 }

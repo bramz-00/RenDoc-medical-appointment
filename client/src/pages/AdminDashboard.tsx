@@ -1,292 +1,352 @@
-import React, { useState } from 'react';
-import { 
-  Menu, 
-  X, 
-  Home, 
-  Users, 
-  ShoppingCart, 
-  BarChart3, 
-  Settings, 
-  Bell, 
-  Search,
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Package,
-  UserPlus,
-  MoreHorizontal,
-  Sun,
-  Moon,
-  ChevronDown
-} from 'lucide-react'; 
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Box, Typography, Grid, Card, CardContent, Stack, Chip, Avatar,
+  Button, IconButton, TextField, Dialog, DialogTitle, DialogContent,
+  DialogActions, Tabs, Tab, CircularProgress, Select,
+  MenuItem, FormControl, InputLabel, Paper, Alert, Tooltip,
+} from "@mui/material";
+import {
+  People as PeopleIcon,
+  LocalHospital as DoctorIcon,
+  MedicalServices as CabinetIcon,
+  Category as SpecialityIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Add as AddIcon,
+  Person as PersonIcon,
+} from "@mui/icons-material";
+import {
+  adminService,
+  type CreateDoctorPayload,
+  type UpdateDoctorPayload,
+} from "@/services/adminService";
+import UserLayout from "@/layouts/UserLayout";
+
+// ── Small Components ──────────────────────────────────────────────────────────
+
+function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number; color: string }) {
+  return (
+    <Card sx={{ borderRadius: 4, border: "1px solid", borderColor: `${color}.light`, background: `linear-gradient(135deg, ${color === "primary" ? "#e3f2fd" : color === "success" ? "#e8f5e9" : color === "warning" ? "#fff8e1" : "#f3e5f5"} 0%, #fff 100%)` }}>
+      <CardContent sx={{ p: 3 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h3" fontWeight="900" color={`${color}.main`}>{value}</Typography>
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>{label}</Typography>
+          </Box>
+          <Box sx={{ p: 2, bgcolor: `${color}.light`, borderRadius: 3, color: `${color}.main` }}>{icon}</Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeMenuItem, setActiveMenuItem] = useState('Dashboard');
+  const qc = useQueryClient();
+  const [tab, setTab] = useState(0);
 
-  const menuItems = [
-    { name: 'Dashboard', icon:Home, active: true },
-    { name: 'Users', icon: Users },
-    { name: 'Orders', icon: ShoppingCart },
-    { name: 'Analytics', icon: BarChart3 },
-    { name: 'Products', icon: Package },
-    { name: 'Settings', icon: Settings },
-  ];
+  // ── Data Queries ──
+  const { data: doctors = [], isLoading: loadingDoctors } = useQuery({ queryKey: ["admin-doctors"], queryFn: adminService.getAllDoctors });
+  const { data: patients = [], isLoading: loadingPatients } = useQuery({ queryKey: ["admin-patients"], queryFn: adminService.getAllPatients });
+  const { data: cabinets = [], isLoading: loadingCabinets } = useQuery({ queryKey: ["admin-cabinets"], queryFn: adminService.getAllCabinets });
+  const { data: specialities = [], isLoading: loadingSpec } = useQuery({ queryKey: ["admin-specialities"], queryFn: adminService.getAllSpecialities });
 
-  const statsCards = [
-    {
-      title: 'Total Revenue',
-      value: '$124,532',
-      change: '+12.5%',
-      changeType: 'increase',
-      icon: DollarSign,
-      color: 'emerald'
-    },
-    {
-      title: 'New Users',
-      value: '1,429',
-      change: '+8.2%',
-      changeType: 'increase',
-      icon: UserPlus,
-      color: 'blue'
-    },
-    {
-      title: 'Orders',
-      value: '2,847',
-      change: '-2.1%',
-      changeType: 'decrease',
-      icon: ShoppingCart,
-      color: 'amber'
-    },
-    {
-      title: 'Growth Rate',
-      value: '18.3%',
-      change: '+5.4%',
-      changeType: 'increase',
-      icon: TrendingUp,
-      color: 'purple'
-    },
-  ];
+  // ── Mutations ──
+  const deleteDoctor = useMutation({ mutationFn: adminService.deleteDoctor, onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-doctors"] }); } });
+  const deleteCabinet = useMutation({ mutationFn: adminService.deleteCabinet, onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-cabinets"] }); } });
+  const deleteSpeciality = useMutation({ mutationFn: adminService.deleteSpeciality, onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-specialities"] }); } });
+  const createDoctor = useMutation({ mutationFn: adminService.createDoctor, onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-doctors"] }); setDoctorDialog(false); } });
+  const updateDoctor = useMutation({ mutationFn: ({ id, payload }: { id: number; payload: UpdateDoctorPayload }) => adminService.updateDoctor(id, payload), onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-doctors"] }); setEditDoctorDialog(null); } });
+  const createCabinet = useMutation({ mutationFn: adminService.createCabinet, onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-cabinets"] }); setCabinetDialog(false); } });
+  const createSpeciality = useMutation({ mutationFn: adminService.createSpeciality, onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-specialities"] }); setSpecDialog(false); } });
 
-  const recentActivity = [
-    { id: 1, user: 'Sarah Johnson', action: 'Placed an order', time: '2 minutes ago', amount: '$299.00' },
-    { id: 2, user: 'Mike Chen', action: 'Updated profile', time: '5 minutes ago', amount: null },
-    { id: 3, user: 'Emma Wilson', action: 'Cancelled order', time: '10 minutes ago', amount: '$156.00' },
-    { id: 4, user: 'David Brown', action: 'Placed an order', time: '15 minutes ago', amount: '$89.00' },
-  ];
+  // ── Dialog state ──
+  const [doctorDialog, setDoctorDialog] = useState(false);
+  const [editDoctorDialog, setEditDoctorDialog] = useState<any>(null);
+  const [cabinetDialog, setCabinetDialog] = useState(false);
+  const [specDialog, setSpecDialog] = useState(false);
 
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  // ── Form state ──
+  const [newDoctor, setNewDoctor] = useState<CreateDoctorPayload>({ firstname: "", lastname: "", email: "", password: "", specialityId: 0, cabinetId: 0 });
+  const [editDoc, setEditDoc] = useState<UpdateDoctorPayload & { id: number }>({ id: 0, firstname: "", lastname: "", status: "ACTIVE", specialityId: 0, cabinetId: 0 });
+  const [newCabinet, setNewCabinet] = useState({ name: "", location: "" });
+  const [newSpec, setNewSpec] = useState("");
 
-
+  const handleOpenEditDoctor = (doc: any) => {
+    setEditDoc({ id: doc.id, firstname: doc.user.firstname, lastname: doc.user.lastname, status: doc.status, specialityId: doc.speciality?.id, cabinetId: doc.cabinet?.id });
+    setEditDoctorDialog(doc);
+  };
 
   return (
-    <div className={ ''}>
-      <div className="min-h-screen bg-gray-50  transition-colors duration-200">
-        {/* Mobile Sidebar Overlay */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-            onClick={toggleSidebar}
-          />
-        )}
+    <UserLayout>
+      <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1400, mx: "auto" }}>
+        {/* Header */}
+        <Box sx={{ mb: 5 }}>
+          <Typography variant="h3" fontWeight="900" sx={{ background: "linear-gradient(45deg,#1976d2,#9c27b0)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            Administration
+          </Typography>
+          <Typography color="text.secondary">Gestion globale de la plateforme RenDoc</Typography>
+        </Box>
 
-        {/* Sidebar */}
-        <aside className={`
-          fixed top-0 left-0 z-50 h-full w-64 bg-white
-          border-r border-gray-200  transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}>
-          <div className="flex flex-col h-full">
-            {/* Logo */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 ">
-              <h1 className="text-xl font-bold text-gray-900 ">AdminPanel</h1>
-              <button 
-                onClick={toggleSidebar}
-                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 "
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+        {/* Stats */}
+        <Grid container spacing={3} sx={{ mb: 5 }}>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<DoctorIcon />} label="Médecins actifs" value={doctors.length} color="primary" /></Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<PeopleIcon />} label="Patients enregistrés" value={patients.length} color="success" /></Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<CabinetIcon />} label="Cabinets médicaux" value={cabinets.length} color="warning" /></Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }}><StatCard icon={<SpecialityIcon />} label="Spécialités" value={specialities.length} color="secondary" /></Grid>
+        </Grid>
 
-            {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-2">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = item.name === activeMenuItem;
-                
-                return (
-                  <button
-                    key={item.name}
-                    onClick={() => setActiveMenuItem(item.name)}
-                    className={`
-                      w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors
-                      ${isActive 
-                        ? 'bg-blue-600 text-white shadow-lg' 
-                        : 'text-gray-700  hover:bg-gray-100 '
-                      }
-                    `}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="font-medium">{item.name}</span>
-                  </button>
-                );
-              })}
-            </nav>
+        {/* Tabs */}
+        <Paper sx={{ borderRadius: 4, border: "1px solid #e0e0e0", overflow: "hidden" }}>
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: "1px solid #e0e0e0", px: 2 }} variant="scrollable">
+            <Tab label="Médecins" icon={<DoctorIcon />} iconPosition="start" />
+            <Tab label="Patients" icon={<PeopleIcon />} iconPosition="start" />
+            <Tab label="Cabinets" icon={<CabinetIcon />} iconPosition="start" />
+            <Tab label="Spécialités" icon={<SpecialityIcon />} iconPosition="start" />
+          </Tabs>
 
-            {/* User Profile */}
-            <div className="p-4 border-t border-gray-200 ">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                  JD
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">John Doe</p>
-                  <p className="text-xs text-gray-500 ">Administrator</p>
-                </div>
-                <ChevronDown className="h-4 w-4 text-gray-500" />
-              </div>
-            </div>
-          </div>
-        </aside>
+          <Box sx={{ p: 3 }}>
 
-        {/* Main Content */}
-        <div className="lg:pl-64">
-          {/* Header */}
-          <header className="bg-white  border-b border-gray-200 px-4 lg:px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={toggleSidebar}
-                  className="lg:hidden p-2 rounded-lg hover:bg-gray-100 "
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-                
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 ">Dashboard</h1>
-                  <p className="text-sm text-gray-500 ">Welcome back, John!</p>
-                </div>
-              </div>
+            {/* ── TAB 0: Doctors ── */}
+            {tab === 0 && (
+              <Box>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+                  <Typography variant="h6" fontWeight="bold">Liste des Médecins</Typography>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDoctorDialog(true)} sx={{ borderRadius: 3, textTransform: "none", fontWeight: "bold" }}>
+                    Ajouter un médecin
+                  </Button>
+                </Stack>
+                {loadingDoctors ? <CircularProgress /> : (
+                  <Stack spacing={2}>
+                    {doctors.map((doc) => (
+                      <Card key={doc.id} sx={{ borderRadius: 3, border: "1px solid #f0f0f0", "&:hover": { borderColor: "primary.main", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }, transition: "0.2s" }}>
+                        <CardContent sx={{ py: "12px !important" }}>
+                          <Stack direction="row" alignItems="center" justifyContent="space-between">
+                            <Stack direction="row" spacing={2} alignItems="center">
+                              <Avatar sx={{ bgcolor: "primary.main", width: 48, height: 48, fontWeight: "bold" }}>
+                                {doc.user.firstname[0]}{doc.user.lastname[0]}
+                              </Avatar>
+                              <Box>
+                                <Typography fontWeight="bold">Dr. {doc.user.firstname} {doc.user.lastname}</Typography>
+                                <Typography variant="body2" color="text.secondary">{doc.user.email}</Typography>
+                                <Stack direction="row" spacing={1} mt={0.5}>
+                                  <Chip size="small" label={doc.speciality?.name || "—"} color="primary" variant="outlined" sx={{ fontSize: "0.7rem", height: 20 }} />
+                                  <Chip size="small" label={doc.cabinet?.name || "—"} sx={{ fontSize: "0.7rem", height: 20, bgcolor: "#f5f5f5" }} />
+                                  <Chip size="small" label={doc.status} color={doc.status === "ACTIVE" ? "success" : "default"} sx={{ fontSize: "0.7rem", height: 20 }} />
+                                </Stack>
+                              </Box>
+                            </Stack>
+                            <Stack direction="row" spacing={1}>
+                              <Tooltip title="Modifier"><IconButton size="small" color="primary" onClick={() => handleOpenEditDoctor(doc)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                              <Tooltip title="Supprimer"><IconButton size="small" color="error" onClick={() => { if (window.confirm("Supprimer ce médecin ?")) deleteDoctor.mutate(doc.id); }}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                            </Stack>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Stack>
+                )}
+              </Box>
+            )}
 
-              <div className="flex items-center gap-4">
-                {/* Search - Hidden on mobile */}
-                <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-gray-100  rounded-lg">
-                  <Search className="h-4 w-4 text-gray-500" />
-                  <input 
-                    type="text" 
-                    placeholder="Search..."
-                    className="bg-transparent border-none outline-none text-sm w-40"
-                  />
-                </div>
+            {/* ── TAB 1: Patients ── */}
+            {tab === 1 && (
+              <Box>
+                <Typography variant="h6" fontWeight="bold" mb={3}>Liste des Patients</Typography>
+                {loadingPatients ? <CircularProgress /> : (
+                  <Stack spacing={2}>
+                    {patients.map((pat) => (
+                      <Card key={pat.id} sx={{ borderRadius: 3, border: "1px solid #f0f0f0" }}>
+                        <CardContent sx={{ py: "12px !important" }}>
+                          <Stack direction="row" alignItems="center" spacing={2}>
+                            <Avatar sx={{ bgcolor: "success.light", color: "success.dark", fontWeight: "bold" }}>
+                              <PersonIcon />
+                            </Avatar>
+                            <Box sx={{ flexGrow: 1 }}>
+                              <Typography fontWeight="bold">{pat.user.firstname} {pat.user.lastname}</Typography>
+                              <Typography variant="body2" color="text.secondary">{pat.user.email}</Typography>
+                            </Box>
+                            <Chip size="small" label={pat.status} color={pat.status === "ACTIVE" ? "success" : "default"} />
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    {patients.length === 0 && <Alert severity="info">Aucun patient enregistré pour l'instant.</Alert>}
+                  </Stack>
+                )}
+              </Box>
+            )}
 
-             
+            {/* ── TAB 2: Cabinets ── */}
+            {tab === 2 && (
+              <Box>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+                  <Typography variant="h6" fontWeight="bold">Cabinets Médicaux</Typography>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCabinetDialog(true)} sx={{ borderRadius: 3, textTransform: "none", fontWeight: "bold" }}>
+                    Ajouter un cabinet
+                  </Button>
+                </Stack>
+                {loadingCabinets ? <CircularProgress /> : (
+                  <Grid container spacing={2}>
+                    {cabinets.map((cab) => (
+                      <Grid size={{ xs: 12, md: 6, lg: 4 }} key={cab.id}>
+                        <Card sx={{ borderRadius: 3, border: "1px solid #f0f0f0", height: "100%", "&:hover": { borderColor: "warning.main", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }, transition: "0.2s" }}>
+                          <CardContent>
+                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                              <Box>
+                                <Typography fontWeight="bold" variant="subtitle1">{cab.name}</Typography>
+                                <Typography variant="body2" color="text.secondary">{cab.location}</Typography>
+                              </Box>
+                              <IconButton size="small" color="error" onClick={() => { if (window.confirm("Supprimer ce cabinet ?")) deleteCabinet.mutate(cab.id); }}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                    {cabinets.length === 0 && <Grid size={12}><Alert severity="info">Aucun cabinet créé.</Alert></Grid>}
+                  </Grid>
+                )}
+              </Box>
+            )}
 
-                <button className="relative p-2 rounded-lg hover:bg-gray-100 ">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-                </button>
+            {/* ── TAB 3: Specialities ── */}
+            {tab === 3 && (
+              <Box>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+                  <Typography variant="h6" fontWeight="bold">Spécialités Médicales</Typography>
+                  <Button variant="contained" startIcon={<AddIcon />} onClick={() => setSpecDialog(true)} sx={{ borderRadius: 3, textTransform: "none", fontWeight: "bold" }}>
+                    Ajouter une spécialité
+                  </Button>
+                </Stack>
+                {loadingSpec ? <CircularProgress /> : (
+                  <Stack direction="row" flexWrap="wrap" gap={2}>
+                    {specialities.map((sp) => (
+                      <Chip
+                        key={sp.id}
+                        label={sp.name}
+                        color="secondary"
+                        variant="outlined"
+                        onDelete={() => { if (window.confirm(`Supprimer ${sp.name} ?`)) deleteSpeciality.mutate(sp.id); }}
+                        sx={{ fontWeight: "bold", borderRadius: 2, px: 1 }}
+                      />
+                    ))}
+                    {specialities.length === 0 && <Alert severity="info">Aucune spécialité créée.</Alert>}
+                  </Stack>
+                )}
+              </Box>
+            )}
 
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  JD
-                </div>
-              </div>
-            </div>
-          </header>
+          </Box>
+        </Paper>
 
-          {/* Dashboard Content */}
-          <main className="p-4 lg:p-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-              {statsCards.map((stat, index) => {
-                const Icon = stat.icon;
-                const TrendIcon = stat.changeType === 'increase' ? TrendingUp : TrendingDown;
-                
-                return (
-                  <div key={index} className="bg-white  rounded-xl p-6 border border-gray-200 ">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={`p-3 rounded-lg `}>
-                        <Icon className="h-6 w-6" />
-                      </div>
-                      <button className="p-1 rounded hover:bg-gray-100 ">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500  mb-1">
-                        {stat.title}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-gray-900 ">
-                          {stat.value}
-                        </span>
-                        <div className={`flex items-center gap-1 text-sm ${
-                          stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          <TrendIcon className="h-3 w-3" />
-                          {stat.change}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {/* ── DIALOG: Create Doctor ── */}
+        <Dialog open={doctorDialog} onClose={() => setDoctorDialog(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+          <DialogTitle sx={{ fontWeight: "bold" }}>Ajouter un médecin</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <Stack direction="row" spacing={2}>
+                <TextField fullWidth label="Prénom" value={newDoctor.firstname} onChange={e => setNewDoctor(p => ({ ...p, firstname: e.target.value }))} />
+                <TextField fullWidth label="Nom" value={newDoctor.lastname} onChange={e => setNewDoctor(p => ({ ...p, lastname: e.target.value }))} />
+              </Stack>
+              <TextField fullWidth label="Email" type="email" value={newDoctor.email} onChange={e => setNewDoctor(p => ({ ...p, email: e.target.value }))} />
+              <TextField fullWidth label="Mot de passe" type="password" value={newDoctor.password} onChange={e => setNewDoctor(p => ({ ...p, password: e.target.value }))} />
+              <FormControl fullWidth>
+                <InputLabel>Spécialité</InputLabel>
+                <Select label="Spécialité" value={newDoctor.specialityId || ""} onChange={e => setNewDoctor(p => ({ ...p, specialityId: Number(e.target.value) }))}>
+                  {specialities.map(s => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth>
+                <InputLabel>Cabinet</InputLabel>
+                <Select label="Cabinet" value={newDoctor.cabinetId || ""} onChange={e => setNewDoctor(p => ({ ...p, cabinetId: Number(e.target.value) }))}>
+                  {cabinets.map(c => <MenuItem key={c.id} value={c.id}>{c.name} — {c.location}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 3 }}>
+            <Button onClick={() => setDoctorDialog(false)} sx={{ borderRadius: 2 }}>Annuler</Button>
+            <Button variant="contained" onClick={() => createDoctor.mutate(newDoctor)} disabled={createDoctor.isPending} sx={{ borderRadius: 2, fontWeight: "bold" }}>
+              {createDoctor.isPending ? "Création..." : "Créer le médecin"}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-            {/* Content Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              {/* Chart Placeholder */}
-              <div className="xl:col-span-2 bg-white rounded-xl p-6 border border-gray-200 ">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 ">Revenue Overview</h2>
-                  <select className="text-sm border border-gray-200  rounded-lg px-3 py-1 bg-white ">
-                    <option>Last 7 days</option>
-                    <option>Last 30 days</option>
-                    <option>Last 90 days</option>
-                  </select>
-                </div>
-                
-                {/* Chart Placeholder */}
-                <div className="h-64 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg flex items-center justify-center">
-                  <p className="text-gray-500 ">Chart Component Here</p>
-                </div>
-              </div>
+        {/* ── DIALOG: Edit Doctor ── */}
+        <Dialog open={!!editDoctorDialog} onClose={() => setEditDoctorDialog(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+          <DialogTitle sx={{ fontWeight: "bold" }}>Modifier le médecin</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <Stack direction="row" spacing={2}>
+                <TextField fullWidth label="Prénom" value={editDoc.firstname} onChange={e => setEditDoc(p => ({ ...p, firstname: e.target.value }))} />
+                <TextField fullWidth label="Nom" value={editDoc.lastname} onChange={e => setEditDoc(p => ({ ...p, lastname: e.target.value }))} />
+              </Stack>
+              <FormControl fullWidth>
+                <InputLabel>Statut</InputLabel>
+                <Select label="Statut" value={editDoc.status || "ACTIVE"} onChange={e => setEditDoc(p => ({ ...p, status: e.target.value }))}>
+                  <MenuItem value="ACTIVE">ACTIVE</MenuItem>
+                  <MenuItem value="INACTIVE">INACTIVE</MenuItem>
+                  <MenuItem value="SUSPENDED">SUSPENDED</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl fullWidth>
+                <InputLabel>Spécialité</InputLabel>
+                <Select label="Spécialité" value={editDoc.specialityId || ""} onChange={e => setEditDoc(p => ({ ...p, specialityId: Number(e.target.value) }))}>
+                  {specialities.map(s => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth>
+                <InputLabel>Cabinet</InputLabel>
+                <Select label="Cabinet" value={editDoc.cabinetId || ""} onChange={e => setEditDoc(p => ({ ...p, cabinetId: Number(e.target.value) }))}>
+                  {cabinets.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 3 }}>
+            <Button onClick={() => setEditDoctorDialog(null)} sx={{ borderRadius: 2 }}>Annuler</Button>
+            <Button variant="contained" onClick={() => updateDoctor.mutate({ id: editDoc.id, payload: { firstname: editDoc.firstname, lastname: editDoc.lastname, status: editDoc.status, specialityId: editDoc.specialityId, cabinetId: editDoc.cabinetId } })} disabled={updateDoctor.isPending} sx={{ borderRadius: 2, fontWeight: "bold" }}>
+              {updateDoctor.isPending ? "Mise à jour..." : "Enregistrer"}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-              {/* Recent Activity */}
-              <div className="bg-white rounded-xl p-6 border border-gray-200 ">
-                <h2 className="text-lg font-semibold text-gray-900  mb-6">Recent Activity</h2>
-                
-                <div className="space-y-4">
-                  {recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-100  rounded-full flex items-center justify-center">
-                        <Users className="h-4 w-4 text-gray-600 " />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900  truncate">
-                          {activity.user}
-                        </p>
-                        <p className="text-xs text-gray-500 ">
-                          {activity.action} • {activity.time}
-                        </p>
-                      </div>
-                      {activity.amount && (
-                        <span className="text-sm font-medium text-green-600">
-                          {activity.amount}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                
-                <button className="w-full mt-4 py-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  View all activity
-                </button>
-              </div>
-            </div>
-          </main>
-        </div>
-      </div>
-    </div>
+        {/* ── DIALOG: Create Cabinet ── */}
+        <Dialog open={cabinetDialog} onClose={() => setCabinetDialog(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+          <DialogTitle sx={{ fontWeight: "bold" }}>Nouveau cabinet</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField fullWidth label="Nom du cabinet" value={newCabinet.name} onChange={e => setNewCabinet(p => ({ ...p, name: e.target.value }))} />
+              <TextField fullWidth label="Adresse / Localisation" value={newCabinet.location} onChange={e => setNewCabinet(p => ({ ...p, location: e.target.value }))} />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 3 }}>
+            <Button onClick={() => setCabinetDialog(false)} sx={{ borderRadius: 2 }}>Annuler</Button>
+            <Button variant="contained" onClick={() => createCabinet.mutate(newCabinet)} disabled={createCabinet.isPending} sx={{ borderRadius: 2, fontWeight: "bold" }}>
+              {createCabinet.isPending ? "Création..." : "Créer"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* ── DIALOG: Create Speciality ── */}
+        <Dialog open={specDialog} onClose={() => setSpecDialog(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+          <DialogTitle sx={{ fontWeight: "bold" }}>Nouvelle spécialité</DialogTitle>
+          <DialogContent>
+            <TextField fullWidth label="Nom de la spécialité" value={newSpec} onChange={e => setNewSpec(e.target.value)} sx={{ mt: 1 }} />
+          </DialogContent>
+          <DialogActions sx={{ p: 3 }}>
+            <Button onClick={() => setSpecDialog(false)} sx={{ borderRadius: 2 }}>Annuler</Button>
+            <Button variant="contained" onClick={() => createSpeciality.mutate(newSpec)} disabled={createSpeciality.isPending} sx={{ borderRadius: 2, fontWeight: "bold" }}>
+              {createSpeciality.isPending ? "Création..." : "Créer"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+      </Box>
+    </UserLayout>
   );
 }

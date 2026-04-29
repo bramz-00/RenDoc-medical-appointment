@@ -9,6 +9,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 @Entity
 @Table(name = "users")
 @Data
@@ -26,6 +27,7 @@ public class User  implements UserDetails {
     private String lastname;
     @Column(unique = true, nullable = false)
     private String email;
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
     @Enumerated(EnumType.STRING)
@@ -35,8 +37,10 @@ public class User  implements UserDetails {
     private LocalDateTime createdAt = LocalDateTime.now();
 
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user")
     private List<Doctor> doctors;
+    @JsonIgnore
     @OneToMany(mappedBy = "user")
     private List<Patient> patients;
 

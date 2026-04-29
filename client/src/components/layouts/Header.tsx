@@ -97,20 +97,30 @@ const Header = () => {
 
           {/* Desktop Nav */}
           <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" }, gap: 3 }}>
-            {pages.map((page) => (
+            {user?.role === "DOCTOR" && (
               <Button
-                key={page}
-                onClick={() => navigate(`/${page.toLowerCase()}`)}
-                sx={{
-                  color: "white",
-                  fontWeight: 500,
-                  textTransform: "none",
-                  "&:hover": { backgroundColor: "rgba(255,255,255,0.1)" },
-                }}
+                onClick={() => navigate("/availability")}
+                sx={{ color: "white", textTransform: "none", fontWeight: 500 }}
               >
-                {page}
+                Manage Availability
               </Button>
-            ))}
+            )}
+            {user?.role === "PATIENT" && (
+              <Button
+                onClick={() => navigate("/book")}
+                sx={{ color: "white", textTransform: "none", fontWeight: 500 }}
+              >
+                Book Appointment
+              </Button>
+            )}
+            {user?.role === "ADMIN" && (
+              <Button
+                onClick={() => navigate("/admin")}
+                sx={{ color: "white", textTransform: "none", fontWeight: 500 }}
+              >
+                Admin Panel
+              </Button>
+            )}
           </Box>
 
           {/* User Menu */}
@@ -145,6 +155,15 @@ const Header = () => {
                   },
                 }}
               >
+                <MenuItem
+                  onClick={() => {
+                    handleCloseUserMenu();
+                    navigate("/appointments");
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 500 }}>My Appointments</Typography>
+                </MenuItem>
+
                 <MenuItem
                   onClick={() => {
                     handleCloseUserMenu();

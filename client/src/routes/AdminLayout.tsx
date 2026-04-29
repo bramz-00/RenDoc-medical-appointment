@@ -2,10 +2,10 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 
 export default function AdminLayout() {
-  const { isAdmin, user, loading } = useAuthStore();
+  const { isAdmin, user, token, loading } = useAuthStore();
 
-  if (loading) {
-    return <div>Loading...</div>; // Or spinner
+  if (loading || (token && !user)) {
+    return <div>Loading...</div>; // Wait for whoami
   }
 
   if (!user || !isAdmin) {

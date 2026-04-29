@@ -23,7 +23,6 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 @RestController
 @RequestMapping("${api.prefix}/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class AuthController {
     private final IAuthService authService;
 

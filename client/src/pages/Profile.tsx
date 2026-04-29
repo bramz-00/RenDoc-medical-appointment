@@ -1,19 +1,65 @@
 import UserLayout from "@/layouts/UserLayout";
 import { useAuthStore } from "@/stores/authStore";
 import {
-  Avatar,
   Box,
   Button,
   Card,
   CardContent,
   Divider,
   Typography,
+  TextField,
+  Stack,
 } from "@mui/material";
-import { deepPurple } from "@mui/material/colors";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useUser } from "@/hooks/useUser";
+import { useForm } from "react-hook-form";
+import type { UpdateProfileData } from "@/services/userService";
 
 export default function Profile() {
-  const { user, fetchUser, logout } = useAuthStore();
+  const { user: authUser, logout } = useAuthStore();
+  const { user: profileUser, updateProfile, isUpdating } = useUser(authUser?.id);
+  
+  const [activeTab, setActiveTab] = useState(0); // 0 for Info, 1 for Security
+
+  // Sync profile data
+  const user = profileUser || authUser;
+
+  const infoForm = useForm<UpdateProfileData>({
+    defaultValues: {
+      firstName: user?.firstname || "",
+      lastName: user?.lastname || "",
+      email: user?.email || "",
+    }
+  });
+
+  // Sync form when user data arrives/changes (fixes empty form on refresh)
+  useEffect(() => {
+    if (user) {
+      infoForm.reset({
+        firstName: user.firstname,
+        lastName: user.lastname,
+        email: user.email,
+      });
+    }
+  }, [user, infoForm]);
+
+  const securityForm = useForm<UpdateProfileData>();
+
+  const onUpdateInfo = (data: UpdateProfileData) => {
+    updateProfile(data, {
+      onSuccess: () => alert("Information updated successfully!")
+    });
+  };
+
+  const onUpdatePassword = (data: UpdateProfileData) => {
+    if (!data.password) return;
+    updateProfile({ ...data }, {
+      onSuccess: () => {
+        alert("Password updated successfully!");
+        securityForm.reset();
+      }
+    });
+  };
 
   const handleLogout = async () => {
     if (window.confirm("Are you sure you want to logout?")) {
@@ -21,111 +67,127 @@ export default function Profile() {
     }
   };
 
-
-
   if (!user) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-        <Typography variant="h6" color="text.secondary">
-          Loading profile...
-        </Typography>
+        <Typography variant="h6" color="text.secondary">Loading profile...</Typography>
       </Box>
     );
   }
 
   return (
     <UserLayout>
-     <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
-      <Card
-      
-        sx={{
-          width: 600,
-          borderRadius: 3,
-          border: "1px solid #e0e0e0",
-          boxShadow: "none",
-        }}
-      >
-        <CardContent>
-          {/* Profile Header */}
-          <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
-            <Avatar
-              sx={{
-                bgcolor: deepPurple[500],
-                width: 100,
-                height: 100,
-                fontSize: 36,
-                mb: 2,
-              }}
-            >
-              {user.firstname?.[0]}
-              {user.lastname?.[0]}
-            </Avatar>
-            <Typography variant="h5" fontWeight="bold">
-              {user.firstname} {user.lastname}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {user.email}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                mt: 1,
-                px: 2,
-                py: 0.5,
-                borderRadius: 1,
-                bgcolor: "primary.main",
-                color: "white",
-              }}
-            >
-              {user.role}
-            </Typography>
+      <Box sx={{ p: 4, maxWidth: 900, mx: "auto" }}>
+        <Typography variant="h4" fontWeight="bold" mb={4}>Account Settings</Typography>
+        
+        <Stack direction={{ xs: "column", md: "row" }} spacing={4}>
+          {/* Sidebar Navigation */}
+          <Box sx={{ width: { xs: "100%", md: 240 } }}>
+            <Card sx={{ borderRadius: 2, border: "1px solid #e0e0e0", boxShadow: "none" }}>
+              <Stack>
+                <Button 
+                  onClick={() => setActiveTab(0)}
+                  sx={{ 
+                    justifyContent: "flex-start", p: 2,
+                    bgcolor: activeTab === 0 ? "rgba(0, 0, 0, 0.04)" : "transparent",
+                    color: activeTab === 0 ? "primary.main" : "text.primary"
+                  }}
+                >
+                  General Information
+                </Button>
+                <Divider />
+                <Button 
+                   onClick={() => setActiveTab(1)}
+                   sx={{ 
+                     justifyContent: "flex-start", p: 2,
+                     bgcolor: activeTab === 1 ? "rgba(0, 0, 0, 0.04)" : "transparent",
+                     color: activeTab === 1 ? "primary.main" : "text.primary"
+                   }}
+                >
+                  Security & Password
+                </Button>
+                <Divider />
+                <Button color="error" onClick={handleLogout} sx={{ justifyContent: "flex-start", p: 2 }}>
+                  Logout
+                </Button>
+              </Stack>
+            </Card>
           </Box>
 
-          <Divider sx={{ mb: 3 }} />
+          {/* Main Content Area */}
+          <Box flex={1}>
+            {activeTab === 0 && (
+              <Card sx={{ borderRadius: 2, border: "1px solid #e0e0e0", boxShadow: "none" }}>
+                <CardContent sx={{ p: 4 }}>
+                  <Typography variant="h6" mb={1}>Profile Information</Typography>
+                  <Typography variant="body2" color="text.secondary" mb={4}>
+                    Update your basic account information and email address.
+                  </Typography>
 
-          {/* Profile Details */}
-          <Box display="flex" flexDirection="column" gap={2}>
-            <Box display="flex" justifyContent="space-between">
-              <Typography variant="subtitle2" color="text.secondary">
-                First Name
-              </Typography>
-              <Typography variant="body1">{user.firstname}</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between">
-              <Typography variant="subtitle2" color="text.secondary">
-                Last Name
-              </Typography>
-              <Typography variant="body1">{user.lastname}</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between">
-              <Typography variant="subtitle2" color="text.secondary">
-                Email
-              </Typography>
-              <Typography variant="body1">{user.email}</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between">
-              <Typography variant="subtitle2" color="text.secondary">
-                Role
-              </Typography>
-              <Typography variant="body1">{user.role}</Typography>
-            </Box>
+                  <form onSubmit={infoForm.handleSubmit(onUpdateInfo)}>
+                    <Stack spacing={3}>
+                      <Stack direction="row" spacing={2}>
+                        <TextField
+                          label="First Name"
+                          fullWidth
+                          {...infoForm.register("firstName", { required: "Required" })}
+                        />
+                        <TextField
+                          label="Last Name"
+                          fullWidth
+                          {...infoForm.register("lastName", { required: "Required" })}
+                        />
+                      </Stack>
+                      <TextField
+                        label="Email Address"
+                        fullWidth
+                        {...infoForm.register("email", { required: "Required" })}
+                      />
+                      <Box>
+                        <Button variant="contained" type="submit" disabled={isUpdating}>
+                          {isUpdating ? "Saving..." : "Save Changes"}
+                        </Button>
+                      </Box>
+                    </Stack>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === 1 && (
+              <Card sx={{ borderRadius: 2, border: "1px solid #e0e0e0", boxShadow: "none" }}>
+                <CardContent sx={{ p: 4 }}>
+                  <Typography variant="h6" mb={1}>Security Settings</Typography>
+                  <Typography variant="body2" color="text.secondary" mb={4}>
+                    Change your account password to stay secure.
+                  </Typography>
+
+                  <form onSubmit={securityForm.handleSubmit(onUpdatePassword)}>
+                    <Stack spacing={3}>
+                      <TextField
+                        label="New Password"
+                        type="password"
+                        fullWidth
+                        {...securityForm.register("password", { 
+                          required: "Required",
+                          minLength: { value: 4, message: "Min 4 characters" }
+                        })}
+                        error={!!securityForm.formState.errors.password}
+                        helperText={securityForm.formState.errors.password?.message}
+                      />
+                      <Box>
+                        <Button variant="contained" color="primary" type="submit" disabled={isUpdating}>
+                          {isUpdating ? "Updating..." : "Update Password"}
+                        </Button>
+                      </Box>
+                    </Stack>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </Box>
-
-          <Divider sx={{ my: 3 }} />
-
-          {/* Actions */}
-          <Box display="flex" justifyContent="center" gap={2}>
-            <Button variant="outlined" color="primary">
-              Edit Profile
-            </Button>
-            <Button variant="outlined" color="error" onClick={handleLogout}>
-              Logout
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-    </Box>     
+        </Stack>
+      </Box>
     </UserLayout>
-  
   );
 }
