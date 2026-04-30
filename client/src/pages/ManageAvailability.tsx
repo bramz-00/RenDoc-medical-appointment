@@ -17,6 +17,15 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Snackbar,
+  Alert,
+  FormControlLabel,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddIcon from "@mui/icons-material/Add";
@@ -36,17 +45,33 @@ const TIME_OPTIONS = generateTimeOptions();
 
 export default function ManageAvailability() {
   const { user } = useAuthStore();
-  const { availability, addAvailabilityAsync, deleteAvailability, isAdding } = useAvailability(user?.id);
+  const { availability, addAvailabilityAsync, deleteAvailability, bulkDeleteAvailability, isAdding, isBulkDeleting } = useAvailability(user?.id);
 
   const [date, setDate] = useState("");
   const [startHour, setStartHour] = useState("");
   const [endHour, setEndHour] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  
+  // Selection state
+  const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
+  
+  // Dialog & Notification state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<number | number[] | null>(null);
+  const [notification, setNotification] = useState<{ open: boolean; message: string; severity: "success" | "error" | "info" }>({
+    open: false,
+    message: "",
+    severity: "info"
+  });
+
+  const showNotification = (message: string, severity: "success" | "error" | "info" = "success") => {
+    setNotification({ open: true, message, severity });
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !startHour || !endHour) {
-      alert("Veuillez remplir tous les champs.");
+      showNotification("Veuillez remplir tous les champs.", "error");
       return;
     }
 
@@ -58,7 +83,7 @@ export default function ManageAvailability() {
     end.setHours(endH, endM, 0, 0);
 
     if (start >= end) {
-      alert("L'heure de fin doit être après l'heure de début.");
+      showNotification("L'heure de fin doit être après l'heure de début.", "error");
       return;
     }
 
@@ -72,7 +97,7 @@ export default function ManageAvailability() {
     }
 
     if (intervals.length === 0) {
-      alert("Plage trop courte pour créer un créneau de 30 minutes.");
+      showNotification("Plage trop courte pour créer un créneau de 30 minutes.", "error");
       return;
     }
 
@@ -80,11 +105,50 @@ export default function ManageAvailability() {
     try {
       await Promise.all(intervals.map(slot => addAvailabilityAsync(slot)));
       setDate(""); setStartHour(""); setEndHour("");
-      alert(`✅ ${intervals.length} créneau${intervals.length > 1 ? "x" : ""} de 30 min créé${intervals.length > 1 ? "s" : ""} !`);
+      showNotification(`✅ ${intervals.length} créneau${intervals.length > 1 ? "x" : ""} de 30 min créé${intervals.length > 1 ? "s" : ""} !`);
     } catch {
-      alert("Erreur lors de la création des créneaux. Réessayez.");
+      showNotification("Erreur lors de la création des créneaux. Réessayez.", "error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedSlots(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Only select slots that are NOT booked
+      setSelectedSlots(availability.filter((s: any) => !(s.booked ?? s.isBooked)).map((s: any) => s.id));
+    } else {
+      setSelectedSlots([]);
+    }
+  };
+
+  const openDeleteConfirm = (idOrIds: number | number[]) => {
+    setDeleteTarget(idOrIds);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    
+    try {
+        if (Array.isArray(deleteTarget)) {
+            await bulkDeleteAvailability(deleteTarget);
+            showNotification(`${deleteTarget.length} créneaux supprimés avec succès.`);
+            setSelectedSlots([]);
+        } else {
+            await deleteAvailability(deleteTarget);
+            showNotification("Créneau supprimé avec succès.");
+            setSelectedSlots(prev => prev.filter(s => s !== deleteTarget));
+        }
+    } catch {
+        showNotification("Erreur lors de la suppression.", "error");
+    } finally {
+        setConfirmOpen(false);
+        setDeleteTarget(null);
     }
   };
 
@@ -182,7 +246,38 @@ export default function ManageAvailability() {
 
           {/* List Slots Panel */}
           <Grid size={{ xs: 12, lg: 8 }}>
-            <Typography variant="h6" fontWeight="bold" mb={3}>Current Availabilities</Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h6" fontWeight="bold" sx={{ m: 0 }}>Current Availabilities</Typography>
+              {availability.length > 0 && (
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <FormControlLabel
+                    control={
+                      <Checkbox 
+                        size="small"
+                        checked={selectedSlots.length === availability.length && availability.length > 0} 
+                        indeterminate={selectedSlots.length > 0 && selectedSlots.length < availability.length}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                      />
+                    }
+                    label={<Typography variant="body2" color="text.secondary">Select All</Typography>}
+                    sx={{ mr: 0 }}
+                  />
+                  {selectedSlots.length > 0 && (
+                    <Button 
+                      variant="contained" 
+                      color="error" 
+                      startIcon={<DeleteOutlineIcon />}
+                      onClick={() => openDeleteConfirm(selectedSlots)}
+                      size="small"
+                      disabled={isBulkDeleting}
+                      sx={{ borderRadius: 2, textTransform: 'none' }}
+                    >
+                      Delete ({selectedSlots.length})
+                    </Button>
+                  )}
+                </Stack>
+              )}
+            </Stack>
             
             {availability.length === 0 ? (
               <Paper sx={{ p: 5, textAlign: "center", borderRadius: 4, bgcolor: "rgba(0,0,0,0.02)", border: "2px dashed #e0e0e0" }}>
@@ -193,59 +288,69 @@ export default function ManageAvailability() {
                 {availability.sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()).map((slot: any) => {
                   const startTime = new Date(slot.startTime);
                   const isPast = isBefore(startTime, new Date());
+                  const isSelected = selectedSlots.includes(slot.id);
 
                   return (
                     <Card key={slot.id} sx={{ 
                       borderRadius: 3, 
-                      border: "1px solid #f0f0f0",
+                      border: "1px solid",
+                      borderColor: isSelected ? "primary.main" : "#f0f0f0",
+                      bgcolor: isSelected ? "primary.50" : "background.paper",
                       transition: "0.2s",
                       "&:hover": { borderColor: "primary.main", transform: "translateY(-2px)", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }
                     }}>
-                      <CardContent sx={{ py: "16px !important" }}>
+                      <CardContent sx={{ py: "12px !important" }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Stack direction="row" spacing={3} alignItems="center">
-                            <Box sx={{ 
-                              p: 1.5, 
-                              bgcolor: isPast ? "action.disabledBackground" : "primary.light", 
-                              color: isPast ? "text.disabled" : "primary.main",
-                              borderRadius: 2,
-                              textAlign: "center",
-                              minWidth: 80
-                            }}>
-                              <Typography variant="caption" fontWeight="bold" display="block">
-                                {format(startTime, "MMM").toUpperCase()}
-                              </Typography>
-                              <Typography variant="h6" lineHeight="1">
-                                {format(startTime, "dd")}
-                              </Typography>
-                            </Box>
-                            
-                            <Box>
-                              <Typography variant="subtitle1" fontWeight="bold">
-                                {format(startTime, "EEEE, p")} - {format(new Date(slot.endTime), "p")}
-                              </Typography>
-                              <Stack direction="row" spacing={1} mt={0.5}>
-                                <Chip 
-                                  size="small" 
-                                  label={(slot.booked ?? slot.isBooked) ? "BOOKED" : "AVAILABLE"} 
-                                  color={(slot.booked ?? slot.isBooked) ? "error" : "success"}
-                                  sx={{ fontWeight: "bold", fontSize: "0.7rem", height: 20 }}
-                                />
-                                {isPast && (
-                                  <Chip size="small" label="PAST" variant="outlined" sx={{ fontSize: "0.7rem", height: 20 }} />
-                                )}
-                              </Stack>
-                            </Box>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Checkbox 
+                              checked={isSelected}
+                              onChange={() => handleToggleSelect(slot.id)}
+                              disabled={slot.booked ?? slot.isBooked}
+                            />
+                            <Stack direction="row" spacing={3} alignItems="center">
+                              <Box sx={{ 
+                                p: 1.5, 
+                                bgcolor: isPast ? "action.disabledBackground" : "primary.light", 
+                                color: isPast ? "text.disabled" : "primary.main",
+                                borderRadius: 2,
+                                textAlign: "center",
+                                minWidth: 80
+                              }}>
+                                <Typography variant="caption" fontWeight="bold" display="block">
+                                  {format(startTime, "MMM").toUpperCase()}
+                                </Typography>
+                                <Typography variant="h6" lineHeight="1">
+                                  {format(startTime, "dd")}
+                                </Typography>
+                              </Box>
+                              
+                              <Box>
+                                <Typography variant="subtitle1" fontWeight="bold">
+                                  {format(startTime, "EEEE, p")} - {format(new Date(slot.endTime), "p")}
+                                </Typography>
+                                <Stack direction="row" spacing={1} mt={0.5}>
+                                  <Chip 
+                                    size="small" 
+                                    label={(slot.booked ?? slot.isBooked) ? "BOOKED" : "AVAILABLE"} 
+                                    color={(slot.booked ?? slot.isBooked) ? "error" : "success"}
+                                    sx={{ fontWeight: "bold", fontSize: "0.65rem", height: 18 }}
+                                  />
+                                  {isPast && (
+                                    <Chip size="small" label="PAST" variant="outlined" sx={{ fontSize: "0.65rem", height: 18 }} />
+                                  )}
+                                </Stack>
+                              </Box>
+                            </Stack>
                           </Stack>
 
                           <IconButton 
                             color="error" 
-                            onClick={() => {
-                                if(window.confirm("Delete this slot?")) deleteAvailability(slot.id);
-                            }}
-                            sx={{ bgcolor: "rgba(211, 47, 47, 0.05)", "&:hover": { bgcolor: "rgba(211, 47, 47, 0.1)" } }}
+                            size="small"
+                            onClick={() => openDeleteConfirm(slot.id)}
+                            disabled={slot.booked ?? slot.isBooked}
+                            sx={{ bgcolor: "rgba(211, 47, 47, 0.05)", "&:hover": { bgcolor: "rgba(211, 47, 47, 0.1)" }, "&.Mui-disabled": { bgcolor: "action.disabledBackground" } }}
                           >
-                            <DeleteOutlineIcon />
+                            <DeleteOutlineIcon fontSize="small" />
                           </IconButton>
                         </Stack>
                       </CardContent>
@@ -257,6 +362,43 @@ export default function ManageAvailability() {
           </Grid>
         </Grid>
       </Box>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Confirmation de suppression</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {Array.isArray(deleteTarget) 
+                ? `Êtes-vous sûr de vouloir supprimer ces ${deleteTarget.length} créneaux ?` 
+                : "Êtes-vous sûr de vouloir supprimer ce créneau ?"} Cette action est irréversible.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={() => setConfirmOpen(false)} variant="outlined" color="inherit" sx={{ borderRadius: 2, textTransform: 'none' }}>
+            Annuler
+          </Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained" autoFocus sx={{ borderRadius: 2, textTransform: 'none' }}>
+            Supprimer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Feedback Snackbar */}
+      <Snackbar 
+        open={notification.open} 
+        autoHideDuration={6000} 
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+            onClose={() => setNotification(prev => ({ ...prev, open: false }))} 
+            severity={notification.severity} 
+            variant="filled"
+            sx={{ width: '100%', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </UserLayout>
   );
 }

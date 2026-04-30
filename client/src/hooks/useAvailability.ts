@@ -30,6 +30,13 @@ export function useAvailability(doctorId?: number) {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: number[]) => availabilityService.bulkDeleteAvailability(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["availability", doctorId] });
+    },
+  });
+
   return {
     availability: availabilityQuery.data || [],
     availableSlots: availableSlotsQuery.data || [],
@@ -38,5 +45,7 @@ export function useAvailability(doctorId?: number) {
     addAvailabilityAsync: addMutation.mutateAsync,
     isAdding: addMutation.isPending,
     deleteAvailability: deleteMutation.mutate,
+    bulkDeleteAvailability: bulkDeleteMutation.mutateAsync,
+    isBulkDeleting: bulkDeleteMutation.isPending,
   };
 }

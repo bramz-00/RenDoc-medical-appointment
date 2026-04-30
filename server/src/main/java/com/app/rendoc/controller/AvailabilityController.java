@@ -45,4 +45,15 @@ public class AvailabilityController {
         availabilityService.deleteAvailability(id);
         return ResponseEntity.ok(new ApiResponse("Deleted", null));
     }
+
+    @DeleteMapping("/bulk-delete")
+    @PreAuthorize("hasRole('DOCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> bulkDelete(@RequestBody List<Long> ids) {
+        try {
+            availabilityService.bulkDelete(ids);
+            return ResponseEntity.ok(new ApiResponse("Availabilities deleted!", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(e.getMessage(), null));
+        }
+    }
 }

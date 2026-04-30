@@ -3,7 +3,6 @@ package com.app.rendoc.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import javax.print.Doc;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -30,6 +29,6 @@ public class Availability {
     private boolean isBooked = false;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "availability")
+    @OneToMany(mappedBy = "availability", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Appointment> appointments;
 }

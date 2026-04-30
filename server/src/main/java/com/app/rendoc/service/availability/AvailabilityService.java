@@ -34,11 +34,16 @@ public class AvailabilityService implements IAvailabilityService {
     public void deleteAvailability(Long availabilityId) {
         availabilityRepository.deleteById(availabilityId);
     }
+    
+    @Override
+    public void bulkDelete(List<Long> ids) {
+        availabilityRepository.deleteAllById(ids);
+    }
 
     @Override
     public List<Availability> getAvailableSlotsByDoctor(Long userId) {
         Doctor doctor = doctorRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
-        return availabilityRepository.findByDoctorIdAndIsBookedFalse(doctor.getId());
+        return availabilityRepository.findByDoctorIdAndIsBookedFalseAndStartTimeAfter(doctor.getId(), java.time.LocalDateTime.now());
     }
 }

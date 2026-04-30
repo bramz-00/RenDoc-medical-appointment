@@ -23,5 +23,9 @@ export const availabilityService = {
   deleteAvailability: async (id: number) => {
     const res = await api.delete(`/availabilities/${id}`);
     return res.data;
-  }
+  },
+  bulkDeleteAvailability: async (ids: number[]) => {
+    const res = await api.delete("/availabilities/bulk-delete", { data: ids });
+    return res.data;
+  },
 };

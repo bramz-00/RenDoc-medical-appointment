@@ -7,5 +7,6 @@ public interface IAvailabilityService {
     Availability addAvailability(Long doctorId, Availability availability);
     List<Availability> getAvailabilityByDoctor(Long doctorId);
     void deleteAvailability(Long availabilityId);
+    void bulkDelete(List<Long> ids);
     List<Availability> getAvailableSlotsByDoctor(Long doctorId);
 }

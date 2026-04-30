@@ -44,6 +44,13 @@ public class AppointmentService implements IAppointmentService {
         Availability availability = availabilityRepository.findById(request.getAvailabilityId())
                 .orElseThrow(() -> new ResourceNotFoundException("Availability not found"));
 
+        if (availability.isBooked()) {
+            throw new RuntimeException("This slot is already booked.");
+        }
+        if (availability.getStartTime().isBefore(java.time.LocalDateTime.now())) {
+            throw new RuntimeException("Cannot book an appointment in the past.");
+        }
+
         availability.setBooked(true);
         availabilityRepository.save(availability);
 
